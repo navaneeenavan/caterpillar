@@ -7,6 +7,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:5000"}})
 # Configure Gemini API
 genai.configure(api_key="AIzaSyDXvkJJYAbSDag8EnppGOpzpWmQ8aPUYnY")
 
@@ -108,7 +109,9 @@ def update_engine(truck_serial_number):
     :param truck_serial_number: The serial number of the truck.
     :return: JSON response with the status of the update.
     """
+    
     data = request.json
+    
     engine_data = data.get('engine', {})
     return update_section(truck_serial_number, 'engine', engine_data)
 
@@ -122,7 +125,9 @@ def update_brakes_and_exterior(truck_serial_number):
     :return: JSON response with the status of the update.
     """
     data = request.json
+    print(data)
     brakes_and_exterior_data = data.get('brakes_and_exterior', {})
+    
     return update_section(truck_serial_number, 'brakes_and_exterior', brakes_and_exterior_data)
 
 def generate_battery_info(text):
@@ -259,5 +264,180 @@ def generate_battery_info_route():
 
     return jsonify({'battery_info': battery_info}), 200
 
+
+
+def generate_engine_info(text):
+    """
+    Generate engine information from text using Gemini API.
+    
+    :param text: The input text describing the engine details.
+    :return: Parsed JSON object with engine details.
+    """
+    try:
+        prompt = f"""
+        You are an expert in interpreting technical details from textual descriptions.
+        Given the following text, extract the information related to engine details and fill out the corresponding fields.
+        If any information is not available in the text, leave it empty. Here are the fields you need to fill:
+        - Truck serial number
+        - Attached images (URLs)
+        - Brake fluid color (clean, brown , black)
+        - Brake fluid condition (Good , Bad)
+        - Dent damage (true/false)
+        - Engine oil color (clean, brown , black)
+        - Engine oil condition
+        - Oil leak in engine (Yes/No)
+        - Rust damage (true/false)
+        - Overall summary
+
+        Text: {text}
+        Provide the output as a JSON object with the following format:
+        {{
+            "truck_serial_number": "",
+            "brake_fluid_color": "",
+            "brake_fluid_condition": "",
+            "dent_damage": "",
+            "engine_oil_color": "",
+            "engine_oil_condition": "",
+            "oil_leak_in_engine": "",
+            "rust_damage": "",
+            "overall_summary": ""
+        }}
+        Only provide the JSON object for easier parsing and formatting, without any additional formatting or markdown.
+        """
+
+        model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+        response = model.generate_content([prompt])
+
+        if response.candidates:
+            response_text = response.candidates[0].content.parts[0].text.strip()
+            print(f"Response from Gemini API: {response_text}")
+            
+            if not response_text:
+                return {'error': 'Empty response from API'}
+            
+            data = split_and_load_ejson(response_text)
+            
+            if data is None:
+                print("Attempting to parse response as plain JSON.")
+                data = clean_response(response_text)
+            
+            if data is None:
+                return {'error': 'Failed to extract JSON from API response'}
+            
+            return data
+        else:
+            return {'error': 'No candidates in API response'}
+    
+    except Exception as e:
+        print(f"Error during API call or processing: {str(e)}")
+        return {'error': str(e)}
+    
+@app.route('/generate_engine_info', methods=['POST'])
+def generate_engine_info_route():
+    """
+    Extract engine information from a given text using the Gemini API.
+    
+    :return: JSON object containing extracted engine information.
+    """
+    data = request.get_json()
+    text = data.get('text')
+
+    if not text:
+        return jsonify({'error': 'Text is required'}), 400
+
+    engine_info = generate_engine_info(text)
+    
+    if engine_info is None or 'error' in engine_info:
+        return jsonify(engine_info), 500
+
+    return jsonify({'engine_info': engine_info}), 200
+
+def generate_brakes_and_exterior_info(text):
+    """
+    Generate brakes and exterior information from text using Gemini API.
+    
+    :param text: The input text describing the brakes and exterior details.
+    :return: Parsed JSON object with brakes and exterior details.
+    """
+    try:
+        prompt = f"""
+        You are an expert in interpreting technical details from textual descriptions.
+        Given the following text, extract the information related to brakes and exterior details and fill out the corresponding fields.
+        If any information is not available in the text, leave it empty. Here are the fields you need to fill:
+        - Truck serial number
+        - Attached images (URLs) (attach random urls)
+        - Brake fluid level (not a string)
+        - Brake overall summary
+        - Dent (true/false)
+        - Emergency brake (true/false)
+        - Front brake condition (Good, Fair, Needs Replacement)
+        - Oil leak in suspension (Yes/No)
+        - Rear brake condition (Good, Fair, Needs Replacement)
+        - Rust (true/false)
+
+        Text: {text}
+        Provide the output as a JSON object with the following format:
+        {{
+            "truck_serial_number": "",
+            "attached_images": [],
+            "brake_fluid_level": 10,
+            "brake_overall_summary": "",
+            "dent": false,
+            "emergency_brake": "",
+            "front_brake_condition": "",
+            "oil_leak_in_suspension": false,
+            "rear_brake_condition": "",
+            "rust": false
+        }}
+        Even though you can't find it in the text input just make sure that you are filing ever feilds on the basis of your assumptions even with the summary and fluid level too
+        Only provide the JSON object for easier parsing and formatting, without any additional formatting or markdown even though somethough someof the values are not given just give a assumed value based on teh other values.
+        """
+
+        model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+        response = model.generate_content([prompt])
+
+        if response.candidates:
+            response_text = response.candidates[0].content.parts[0].text.strip()
+            print(f"Response from Gemini API: {response_text}")
+            
+            if not response_text:
+                return {'error': 'Empty response from API'}
+            
+            data = split_and_load_ejson(response_text)
+            
+            if data is None:
+                print("Attempting to parse response as plain JSON.")
+                data = clean_response(response_text)
+            
+            if data is None:
+                return {'error': 'Failed to extract JSON from API response'}
+            
+            return data
+        else:
+            return {'error': 'No candidates in API response'}
+    
+    except Exception as e:
+        print(f"Error during API call or processing: {str(e)}")
+        return {'error': str(e)}
+
+@app.route('/generate_brakes_and_exterior_info', methods=['POST'])
+def generate_brakes_and_exterior_info_route():
+    """
+    Extract brakes and exterior information from a given text using the Gemini API.
+    
+    :return: JSON object containing extracted brakes and exterior information.
+    """
+    data = request.get_json()
+    text = data.get('text')
+
+    if not text:
+        return jsonify({'error': 'Text is required'}), 400
+
+    brakes_and_exterior_info = generate_brakes_and_exterior_info(text)
+    
+    if brakes_and_exterior_info is None or 'error' in brakes_and_exterior_info:
+        return jsonify(brakes_and_exterior_info), 500
+
+    return jsonify({'brakes_and_exterior_info': brakes_and_exterior_info}), 200
 if __name__ == '__main__':
     app.run(debug=True)

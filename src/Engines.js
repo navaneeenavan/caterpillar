@@ -1,60 +1,52 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import axios from "axios";
 
-const Engines = ({ truckId }) => {
-  const [formData, setFormData] = useState({
-    engineRust: "No",
-    engineRustNotes: "",
-    engineRustImages: null,
-    engineDent: "No",
-    engineDentNotes: "",
-    engineDentImages: null,
-    engineOilColor: "Clean",
-    brakeFluidCondition: "Good",
-    brakeFluidColor: "Clean",
-    oilLeakEngine: "No",
-    brakeImages: null,
-  });
-
+const Engines = () => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const { response } = location.state || {};
+  const truckSerialNumber = response?.engine_info.truck_serial_number || "";
+  console.log(truckSerialNumber)
+  const [formData, setFormData] = useState({
+    engineRust: response?.engine_info.engine_rust || "No",
+    engineRustNotes: response?.engine_info.engine_rust_notes || "",
+    engineDent: response?.engine_info.engine_dent || "No",
+    engineDentNotes: response?.engine_info.engine_dent_notes || "",
+    engineOilColor: response?.engine_info.engine_oil_color || "Clean",
+    brakeFluidCondition: response?.engine_info.brake_fluid_condition || "Good",
+    brakeFluidColor: response?.engine_info.brake_fluid_color || "Clean",
+    oilLeakEngine: response?.engine_info.oil_leak_engine || "No",
+    attached_images: [], // Initially empty array
+  });
+  
+  useEffect(() => {
+    if (response) {
+      setFormData({
+        engineRust: response.engine_info.engine_rust || "No",
+        engineRustNotes: response.engine_info.engine_rust_notes || "",
+        engineDent: response.engine_info.engine_dent || "No",
+        engineDentNotes: response.engine_info.engine_dent_notes || "",
+        engineOilColor: response.engine_info.engine_oil_color || "Clean",
+        brakeFluidCondition: response.engine_info.brake_fluid_condition || "Good",
+        brakeFluidColor: response.engine_info.brake_fluid_color || "Clean",
+        oilLeakEngine: response.engine_info.oil_leak_engine || "No",
+        attached_images: [
+          "http://example.com/engine1.jpg",
+          "http://example.com/engine2.jpg"
+        ], // Replace with actual data from your response or keep it as a placeholder
+      });
+    }
+  }, [response]);
+  
 
   const handleInputChange = (e, fieldName) => {
-    const value = e.target.type === "file" ? e.target.files[0] : e.target.value;
-    setFormData({ ...formData, [fieldName]: value });
-  };
-
-  const handleSubmit = async () => {
-    const areAllFieldsFilled = Object.values(formData).every(
-      (field) => field !== "" && field !== null
-    );
-
-    if (!areAllFieldsFilled) {
-      alert("Please fill all the fields.");
-      return;
-    }
-
-    try {
-      const formDataToSubmit = new FormData();
-      for (const key in formData) {
-        formDataToSubmit.append(key, formData[key]);
-      }
-
-      const response = await fetch(`/updateform1/${truckId}`, {
-        method: "POST",
-        body: formDataToSubmit,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to submit form.");
-      }
-
-      toast.success("Form submitted successfully!");
-      navigate("/success");
-    } catch (error) {
-      console.error("Error submitting form:", error.message);
-      toast.error("Failed to submit form. Please try again later.");
-    }
+    const value = e.target.value;
+    setFormData({
+      ...formData,
+      [fieldName]: value,
+    });
   };
 
   const handlePrevious = () => {
@@ -62,32 +54,44 @@ const Engines = ({ truckId }) => {
     navigate("/Brakes");
   };
 
-  const handleNext = () => {
-    // Navigate to the next page
-    navigate("/next-page");
+  const handleNext = async () => {
+    // Post request to update engine information
+    try {
+      const result = await axios.post(
+        `http://127.0.0.1:5000/api/truck-inspections/update-engine/${truckSerialNumber}`,{
+        engine : formData,
+    });
+
+      if (result.status === 200) {
+        toast.success("Engine information updated successfully!");
+        navigate("/Brakes");
+      } else {
+        toast.error("Failed to update engine information.");
+      }
+    } catch (error) {
+      toast.error("An error occurred while updating the engine information.");
+      console.error("Error:", error);
+    }
   };
 
   return (
-    <main className="p-4">
-      
+    <main className="p-4 flex flex-col">
       <Bar />
+            <button className="h-20 w-36 bg-blue-500 text-white" onClick={() => navigate("/EngineLanding")}>
+              Speak UP
+            </button>
+
       <section className="w-full p-4">
         <div className="flex flex-col items-center mb-4">
-          <h1 className="text-2xl font-bold text-blue-500">
-            Engine & Brakes Inspection Form
-          </h1>
+          <h1 className="text-2xl font-bold text-blue-500">Engine & Brakes Inspection Form</h1>
           <div className="h-2 w-80 bg-blue-500 mt-2 mb-4"></div>
-          <p className="text-base font-bold text-gray-600 mb-2">
-            Truck ID: {truckId}
-          </p>
+          <p className="text-base font-bold text-gray-600 mb-2">Truck Serial Number: {truckSerialNumber}</p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex flex-col gap-4">
+        <div className="flex flex-row gap-24">
+          <div className="flex-1">
             <h3 className="text-lg font-bold mb-4">Engine Details</h3>
-
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col">
+            <div className="flex flex-row gap-16 mb-4">
+              <div className="flex-1">
                 <label className="block">Engine Rust</label>
                 <select
                   value={formData.engineRust}
@@ -99,30 +103,19 @@ const Engines = ({ truckId }) => {
                 </select>
               </div>
               {formData.engineRust === "Yes" && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col">
-                    <label className="block">Notes</label>
-                    <input
-                      type="text"
-                      value={formData.engineRustNotes}
-                      onChange={(e) => handleInputChange(e, "engineRustNotes")}
-                      className="border border-gray-300 rounded px-3 py-2 w-full"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="block mt-2">Attach Images</label>
-                    <input
-                      type="file"
-                      onChange={(e) => handleInputChange(e, "engineRustImages")}
-                      className="border border-gray-300 rounded px-3 py-2 w-full"
-                    />
-                  </div>
+                <div className="flex-1">
+                  <label className="block">Notes</label>
+                  <input
+                    type="text"
+                    value={formData.engineRustNotes}
+                    onChange={(e) => handleInputChange(e, "engineRustNotes")}
+                    className="border border-gray-300 rounded px-3 py-2 w-full"
+                  />
                 </div>
               )}
             </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col">
+            <div className="flex flex-row gap-16 mb-4">
+              <div className="flex-1">
                 <label className="block">Engine Dent/Damage</label>
                 <select
                   value={formData.engineDent}
@@ -134,47 +127,36 @@ const Engines = ({ truckId }) => {
                 </select>
               </div>
               {formData.engineDent === "Yes" && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col">
-                    <label className="block">Notes</label>
-                    <input
-                      type="text"
-                      value={formData.engineDentNotes}
-                      onChange={(e) => handleInputChange(e, "engineDentNotes")}
-                      className="border border-gray-300 rounded px-3 py-2 w-full"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="block mt-2">Attach Images</label>
-                    <input
-                      type="file"
-                      onChange={(e) => handleInputChange(e, "engineDentImages")}
-                      className="border border-gray-300 rounded px-3 py-2 w-full"
-                    />
-                  </div>
+                <div className="flex-1">
+                  <label className="block">Notes</label>
+                  <input
+                    type="text"
+                    value={formData.engineDentNotes}
+                    onChange={(e) => handleInputChange(e, "engineDentNotes")}
+                    className="border border-gray-300 rounded px-3 py-2 w-full"
+                  />
                 </div>
               )}
             </div>
-
-            <div className="flex flex-col">
-              <label className="block">Engine Oil Color</label>
-              <select
-                value={formData.engineOilColor}
-                onChange={(e) => handleInputChange(e, "engineOilColor")}
-                className="border border-gray-300 rounded px-3 py-2 w-full"
-              >
-                <option value="Clean">Clean</option>
-                <option value="Brown">Brown</option>
-                <option value="Black">Black</option>
-              </select>
+            <div className="flex flex-row gap-16 mb-4">
+              <div className="flex-1">
+                <label className="block">Engine Oil Color</label>
+                <select
+                  value={formData.engineOilColor}
+                  onChange={(e) => handleInputChange(e, "engineOilColor")}
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
+                >
+                  <option value="Clean">Clean</option>
+                  <option value="Brown">Brown</option>
+                  <option value="Black">Black</option>
+                </select>
+              </div>
             </div>
           </div>
-
-          <div className="flex flex-col gap-4">
+          <div className="flex-1">
             <h3 className="text-lg font-bold mb-4">Brake Details</h3>
-
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col">
+            <div className="flex flex-row gap-16 mb-4">
+              <div className="flex-1">
                 <label className="block">Brake Fluid Condition</label>
                 <select
                   value={formData.brakeFluidCondition}
@@ -185,8 +167,7 @@ const Engines = ({ truckId }) => {
                   <option value="Bad">Bad</option>
                 </select>
               </div>
-
-              <div className="flex flex-col">
+              <div className="flex-1">
                 <label className="block">Brake Fluid Color</label>
                 <select
                   value={formData.brakeFluidColor}
@@ -199,51 +180,39 @@ const Engines = ({ truckId }) => {
                 </select>
               </div>
             </div>
-
-            <div className="flex flex-col">
-              <label className="block">Oil Leak in Engine</label>
-              <select
-                value={formData.oilLeakEngine}
-                onChange={(e) => handleInputChange(e, "oilLeakEngine")}
-                className="border border-gray-300 rounded px-3 py-2 w-full"
-              >
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="block">Brake Images</label>
-              <input
-                type="file"
-                onChange={(e) => handleInputChange(e, "brakeImages")}
-                className="border border-gray-300 rounded px-3 py-2 w-full"
-              />
+            <div className="flex flex-row gap-16 mb-4">
+              <div className="flex-1">
+                <label className="block">Oil Leak in Engine</label>
+                <select
+                  value={formData.oilLeakEngine}
+                  onChange={(e) => handleInputChange(e, "oilLeakEngine")}
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
+                >
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
-
-        <div className="flex w-full mt-32 justify-between space-x-96">
+        <div className="flex justify-between mt-8">
           <button
             onClick={handlePrevious}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300"
+            className="bg-gray-500 text-white rounded px-4 py-2"
           >
             Previous
           </button>
           <button
             onClick={handleNext}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300"
+            className="bg-blue-500 text-white rounded px-4 py-2"
           >
             Next
           </button>
         </div>
-        
       </section>
-      
     </main>
   );
 };
-
 const Bar = () => {
   return (
     <div className="max-w-xl mx-auto my-4 border-b-2 pb-4">
@@ -304,5 +273,4 @@ const Bar = () => {
     </div>
   );
 };
-
 export default Engines;
