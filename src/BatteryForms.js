@@ -44,7 +44,7 @@
 
     const handlePrevious = () => {
       // Navigate to the previous page
-      navigate("/");
+      navigate("/TireForms");
     };
 
     const handleNext = async () => {
@@ -56,7 +56,7 @@
         
         if (result.status === 200) {
           toast.success("Battery information updated successfully!");
-          navigate("/Brakes");
+          navigate("/BatteryForms");
         } else {
           toast.error("Failed to update battery information.");
         }
@@ -70,6 +70,12 @@
     return (
       <main className="p-4 flex flex-col">
         <Bar />
+        <button
+            className="h-20 w-36 bg-blue-500 text-white"
+            onClick={() => navigate("/Battery")}
+          >
+            Speak UP
+          </button>
         <section className="w-full p-4">
           <div className="flex flex-col items-center mb-4">
             <h1 className="text-2xl font-bold text-blue-500">Battery Inspection Form</h1>

@@ -6,7 +6,7 @@ import axios from 'axios';
 import '../src/Landing.css';
 import Forms from './Forms';
 
-const BatteryLanding = () => {
+const TireLanding  = () => {
     const [textToCopy, setTextToCopy] = useState('');
     const [isCopied, setCopied] = useClipboard(textToCopy, { successDuration: 1000 });
     const [response, setResponse] = useState(null);
@@ -21,9 +21,10 @@ const BatteryLanding = () => {
 
     const sendTextToBackend = async () => {
         try {
-            const result = await axios.post('http://127.0.0.1:5000/generate_battery_info', { text: `${transcript} Truck id is ${truckId}` });
+            const result = await axios.post('http://127.0.0.1:5000/api/generate-tire-info', { text: `${transcript} Truck id is ${truckId}` });
             setResponse(result.data);
-            navigate('/BatteryForms', { state: { response: result.data } });
+            console.log(result.data);
+            navigate('/TireForms', { state: { response: result.data } });
         } catch (error) {
             console.error('Error sending text to backend:', error);
             setResponse({ error: 'Error sending text to backend' });
@@ -64,4 +65,4 @@ const BatteryLanding = () => {
     );
 };
 
-export default BatteryLanding;
+export default TireLanding;

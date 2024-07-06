@@ -265,10 +265,10 @@ const Bar = () => {
         <div className="flex-1"></div>
       </div>
       <div className="flex text-xs content-center text-center">
-        <div className="w-1/4">Tire</div>
-        <div className="w-1/4">Battery</div>
-        <div className="w-1/4">Application details</div>
-        <div className="w-1/4">Confirmation</div>
+      <div className="w-1/4">Tires</div>
+            <div className="w-1/4">Battery</div>
+            <div className="w-1/4">Exterior and Brakes</div>
+            <div className="w-1/4">Engines</div>
       </div>
     </div>
   );

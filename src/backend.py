@@ -84,7 +84,8 @@ def update_tires(truck_serial_number):
     :return: JSON response with the status of the update.
     """
     data = request.json
-    tires_data = data.get('tires', {})
+    print(data)
+    tires_data = data.get('tire_info', {})
     return update_section(truck_serial_number, 'tires', tires_data)
 
 # Route to update battery
@@ -439,5 +440,96 @@ def generate_brakes_and_exterior_info_route():
         return jsonify(brakes_and_exterior_info), 500
 
     return jsonify({'brakes_and_exterior_info': brakes_and_exterior_info}), 200
+
+
+
+
+
+
+def generate_tire_info(text):
+    """
+    Generate tire information from text using Gemini API.
+    
+    :param text: The input text describing the tire details.
+    :return: Parsed JSON object with tire details.
+    """
+    try:
+        prompt = f"""
+        You are an expert in interpreting technical details from textual descriptions.
+        Given the following text, extract the information related to tire details and fill out the corresponding fields.
+        If any information is not available in the text, leave it empty. Here are the fields you need to fill:
+        - Truck serial number
+        - Tire pressure (Left Front, Right Front, Left Rear, Right Rear) (number)
+        - Tire condition (Left Front, Right Front, Left Rear, Right Rear) (number)
+        - Tire images (URLs)
+
+        Text: {text}
+        Provide the output as a JSON object with the following format:
+        {{
+            "truck_serial_number": "",
+            "tires": {{
+                "left_front_pressure": "",
+                "left_front_condition": "",
+                "right_front_pressure": "",
+                "right_front_condition": "",
+                "left_rear_pressure": "",
+                "left_rear_condition": "",
+                "right_rear_pressure": "",
+                "right_rear_condition": ""
+            }},
+            "tire_images": [],
+            "overall_summary": ""
+        }}
+        if the value was not specified in the propmt use the sentiment and avaiblable information of the promt and fill the values automatically as your assuumptions even with the tire pressure too
+        Only provide the JSON object for easier parsing and formatting, without any additional formatting or markdown.
+        """
+
+        model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+        response = model.generate_content([prompt])
+
+        if response.candidates:
+            response_text = response.candidates[0].content.parts[0].text.strip()
+            print(f"Response from Gemini API: {response_text}")
+            
+            if not response_text:
+                return {'error': 'Empty response from API'}
+            
+            data = split_and_load_ejson(response_text)
+            
+            if data is None:
+                print("Attempting to parse response as plain JSON.")
+                data = clean_response(response_text)
+            
+            if data is None:
+                return {'error': 'Failed to extract JSON from API response'}
+            
+            return data
+        else:
+            return {'error': 'No candidates in API response'}
+    
+    except Exception as e:
+        print(f"Error during API call or processing: {str(e)}")
+        return {'error': str(e)}
+
+@app.route('/api/generate-tire-info', methods=['POST'])
+def generate_tire_info_route():
+    """
+    Extract tire information from a given text using the Gemini API.
+    
+    :return: JSON object containing extracted tire information.
+    """
+    data = request.get_json()
+    text = data.get('text')
+
+    if not text:
+        return jsonify({'error': 'Text is required'}), 400
+
+    tire_info = generate_tire_info(text)
+    
+    if tire_info is None or 'error' in tire_info:
+        return jsonify(tire_info), 500
+
+    return jsonify({'tire_info': tire_info}), 200
+
 if __name__ == '__main__':
     app.run(debug=True)
