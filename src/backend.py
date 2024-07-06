@@ -1,9 +1,14 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request,send_file
 import google.generativeai as genai
 import re
 import json
 from pymongo import MongoClient
 from flask_cors import CORS
+from pymongo import MongoClient
+from io import BytesIO
+from docx.shared import Inches
+import base64
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -610,6 +615,85 @@ def generate_tire_info_route():
         return jsonify(tire_info), 500
 
     return jsonify({'tire_info': tire_info}), 200
+
+
+def add_image_from_url(doc, url, width=Inches(1.25)):
+    response = requests.get(url)
+    if response.status_code == 200:
+        img_path = "temp_image.jpg"
+        with open(img_path, "wb") as f:
+            f.write(response.content)
+        doc.add_picture(img_path, width=width)
+
+def generate_sample_report(data):
+    doc = Document()
+    doc.add_heading('Sample MongoDB Data Report', level=1).alignment = 1
+
+    for record in data:
+        doc.add_heading('Inspection Report', level=2)
+
+        doc.add_heading('Truck Details', level=3)
+        doc.add_paragraph(f"Serial Number: {record.get('truck_serial_number', '')}")
+        doc.add_paragraph(f"Model: {record.get('truck_model', '')}")
+
+        doc.add_heading('Inspection Details', level=3)
+        doc.add_paragraph(f"Inspection ID: {record.get('inspection_id', '')}")
+        doc.add_paragraph(f"Inspector Name: {record.get('inspector_name', '')}")
+        doc.add_paragraph(f"Inspector Employee ID: {record.get('inspection_employee_id', '')}")
+        doc.add_paragraph(f"Inspection Date & Time: {record.get('inspection_datetime', '')}")
+        doc.add_paragraph(f"Location: {record.get('location', '')}")
+        doc.add_paragraph(f"Geo Coordinates: {record.get('geo_coordinates', '')}")
+        doc.add_paragraph(f"Service Meter Hours: {record.get('service_meter_hours', '')}")
+        doc.add_paragraph(f"Customer Name: {record.get('customer_name', '')}")
+        doc.add_paragraph(f"Customer ID: {record.get('cat_customer_id', '')}")
+
+        doc.add_heading('Tires Details', level=3)
+        tires = record.get('tires', {})
+        doc.add_paragraph(f"Left Front Pressure: {tires.get('left_front_pressure', '')}")
+        doc.add_paragraph(f"Right Front Pressure: {tires.get('right_front_pressure', '')}")
+        doc.add_paragraph(f"Left Front Condition: {tires.get('left_front_condition', '')}")
+        doc.add_paragraph(f"Right Front Condition: {tires.get('right_front_condition', '')}")
+        doc.add_paragraph(f"Left Rear Pressure: {tires.get('left_rear_pressure', '')}")
+        doc.add_paragraph(f"Right Rear Pressure: {tires.get('right_rear_pressure', '')}")
+        doc.add_paragraph(f"Left Rear Condition: {tires.get('left_rear_condition', '')}")
+        doc.add_paragraph(f"Right Rear Condition: {tires.get('right_rear_condition', '')}")
+
+        doc.add_heading('Battery Details', level=3)
+        battery = record.get('battery', {})
+        doc.add_paragraph(f"Make: {battery.get('make', '')}")
+        doc.add_paragraph(f"Replacement Date: {battery.get('replacement_date', '')}")
+        doc.add_paragraph(f"Voltage: {battery.get('voltage', '')}")
+        doc.add_paragraph(f"Water Level: {battery.get('water_level', '')}")
+        condition = battery.get('condition', {})
+        doc.add_paragraph(f"Any Damage: {condition.get('any_damage', '')}")
+        doc.add_paragraph(f"Leak or Rust: {battery.get('leak_or_rust', '')}")
+
+        if battery.get("image_url"):
+            add_image_from_url(doc, battery["image_url"])
+        if tires.get("image_url"):
+            add_image_from_url(doc, tires["image_url"])
+
+        doc.add_page_break()
+
+    byte_io = BytesIO()
+    doc.save(byte_io)
+    byte_io.seek(0)
+
+    return byte_io
+
+@app.route('/generate_report/<inspection_id>', methods=['GET'])
+def generate_report(inspection_id):
+    try:
+        data = list(collection.find({"truck_serial_number": inspection_id}))
+        print(data)
+        if not data:
+            return jsonify({"error": "No data found for truck serial number"}), 404
+    except PyMongoError as e:
+        return jsonify({"error": f"MongoDB error: {str(e)}"}), 500
+
+    doc_io = generate_sample_report(data)
+    return send_file(doc_io, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, attachment_filename=f"{inspection_id}_report.docx")
+
 
 if __name__ == '__main__':
     app.run(debug=True)

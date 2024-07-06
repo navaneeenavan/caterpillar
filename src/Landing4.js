@@ -13,14 +13,14 @@ const TireLanding  = () => {
     const navigate = useNavigate();
     const startListening = () => SpeechRecognition.startListening({ continuous: true, language: 'en-IN' });
     const { transcript, browserSupportsSpeechRecognition } = useSpeechRecognition();
-    const [truckId, setTruckId] = useState(truckid);
+    const [truckId, setTruckId] = useState("");
 
     if (!browserSupportsSpeechRecognition) {
         return null;
     }
 
     const sendTextToBackend = async () => {
-        try {
+        try {  
             const result = await axios.post('http://127.0.0.1:5000/api/generate-tire-info', { text: `${transcript} Truck id is ${truckId}` });
             setResponse(result.data);
             console.log(result.data);
