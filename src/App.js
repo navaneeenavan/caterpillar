@@ -11,7 +11,7 @@ import TireLanding from "./Landing4";
 import TireInspectionForm from "./Forms";
 import BatteryLanding from "./Landing";
 import Init from "./Main";
-import Create from "./Create";
+import NewUser from "./Create";
 
 const App = () => {
   return (
@@ -19,9 +19,8 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/Init" element={<Init />} />
-        <Route path="/Login" element={<Login />} />
-        <Route path = "/Create" element ={<Create/>} />
-        <Route path="/Tire" element={<TireLanding />} />
+        <Route path = "/Create" element ={<NewUser/>} />
+        <Route path="/Tire" element={<TireLanding  />} />
         <Route path="/TireForms" element={<TireInspectionForm />} />
         <Route path="/Battery" element={<BatteryLanding />} />
         <Route path="/BatteryForms" element={<BatteryForms />} />

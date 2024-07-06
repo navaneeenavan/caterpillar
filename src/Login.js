@@ -9,7 +9,7 @@ const Login = () => {
     // Add your form submission logic here (e.g., validation, API calls)
 
     // Redirect to another page after successful form submission
-    navigate('/test'); // Redirect to '/test'
+    navigate('/Init'); // Redirect to '/test'
   };
 
   return (
@@ -56,7 +56,7 @@ const Login = () => {
               type="submit"
               className="w-full flex justify-center py-2 px-4 mt-10 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              Sign In
+              Log-In
             </button>
           </div>
         </form>

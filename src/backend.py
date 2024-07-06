@@ -23,7 +23,87 @@ db = client['inspectionsDB']  # Replace with your database name
 # Select the collection
 collection = db['inspections']  # Replace with your collection name
 
+
+@app.route('/updateform/<truck_id>', methods=['POST'])
+def update_form(truck_id):
+    data = request.json
+    try:
+        new_record = {
+            "battery": {
+                "condition": {
+                    "any_damage": "",
+                    "damage_image": None
+                },
+                "leak_in_battery": False,
+                "make": "",
+                "replacement_date": "",
+                "rust_in_battery": False,
+                "voltage": "",
+                "water_level": ""
+            },
+            "brakes_and_exterior": {
+                "attached_images": [],
+                "brake_fluid_level": 0,
+                "brake_overall_summary": "",
+                "dent": False,
+                "emergency_brake": False,
+                "front_brake_condition": "",
+                "oil_leak_in_suspension": False,
+                "rear_brake_condition": "",
+                "rust": False
+            },
+            "cat_customer_id": "",
+            "customer_name": "",
+            "engine": {
+                "attached_images": [],
+                "brake_fluid_color": "",
+                "brake_fluid_condition": "",
+                "dent_damage": False,
+                "engine_oil_color": "",
+                "engine_oil_condition": "",
+                "oil_leak_in_engine": "",
+                "overall_summary": "",
+                "rust_damage": False
+            },
+            "geo_coordinates": "",
+            "inspection_datetime": "",
+            "inspection_employee_id": "",
+            "inspection_id": "",
+            "inspector_name": "",
+            "inspector_signature": "",
+            "location": "",
+            "service_meter_hours": 0,
+            "tires": {
+                "left_front_condition": "",
+                "left_front_pressure": 0,
+                "left_rear_condition": "",
+                "left_rear_pressure": 0,
+                "right_front_condition": "",
+                "right_front_pressure": 0,
+                "right_rear_condition": "",
+                "right_rear_pressure": 0
+            },
+            "truck_model": "",
+            "truck_serial_number": ""
+        }
+
+        # Update the new record with the values from the form data
+        for key in data:
+            if key in new_record and isinstance(new_record[key], dict):
+                new_record[key].update(data[key])
+            else:
+                new_record[key] = data[key]
+
+        # Insert the new record into the collection
+        result = collection.insert_one(new_record)
+
+        return jsonify({"message": "Form submitted successfully!", "id": str(result.inserted_id)}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/inspections', methods=['GET'])
+
 def get_inspections():
     """
     Fetch all inspection records from the database.

@@ -13,7 +13,7 @@ const TireLanding  = () => {
     const navigate = useNavigate();
     const startListening = () => SpeechRecognition.startListening({ continuous: true, language: 'en-IN' });
     const { transcript, browserSupportsSpeechRecognition } = useSpeechRecognition();
-    const [truckId, setTruckId] = useState('');
+    const [truckId, setTruckId] = useState(truckid);
 
     if (!browserSupportsSpeechRecognition) {
         return null;
